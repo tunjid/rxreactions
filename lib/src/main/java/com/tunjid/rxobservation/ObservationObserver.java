@@ -1,10 +1,10 @@
 package com.tunjid.rxobservation;
 
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Observer;
+import rx.Scheduler;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Func1;
@@ -16,7 +16,8 @@ import rx.schedulers.Schedulers;
  * An {@link Observer} that observes {@link Observation}s
  */
 
-public class ObservationObserver<T> implements
+public class ObservationObserver<T>
+        implements
         ObservationAction<T>,
         Observer<Observation<T>> {
 
@@ -25,7 +26,7 @@ public class ObservationObserver<T> implements
     /**
      * A Mapping of all the observations this observer is yet to make
      */
-    private HashMap<String, Subscription> subscriptionMap = new HashMap<>();
+    private ReactiveSubscriptionMap<T> subscriptionMap = new ReactiveSubscriptionMap<>();
 
     /**
      * A mapper used for deciding what happens after {@link Observer#onNext(Object)} is called
@@ -72,8 +73,6 @@ public class ObservationObserver<T> implements
 
     @Override
     public void onNext(Observation<T> observation) {
-        subscriptionMap.remove(observation.getId());
-
         if (action == null) throw new NullPointerException("Action cannot be null");
 
         if (mapper.canProceed(observation)) action.proceed(observation);
@@ -94,29 +93,24 @@ public class ObservationObserver<T> implements
      * Unsubscribe from the observation with the specified id
      */
     public void unsubscribe(String id) {
-        Subscription subscription = subscriptionMap.get(id);
-        if (subscription != null && !subscription.isUnsubscribed()) subscription.unsubscribe();
+        subscriptionMap.unsubscribe(id);
     }
 
     /**
      * Unsubscribes from all observations
      */
     public void unsubscribeFromAll() {
-        for (String id : subscriptionMap.keySet()) unsubscribe(id);
+        subscriptionMap.unsubscribeFromAll();
     }
 
+
     /**
-     * Subcribes to this observable event synchronously on whatever thread it's called on.
+     * Subcribes to this observable event asynchronously
      *
      * @param id the id used to identify the observable when it completes
      */
-    public <S> Subscription subscribe(String id, Observable<S> observable) {
-        Observable<Observation<T>> observation = create(id, observable);
-
-        Subscription subscription = subscribe(observation);
-        subscriptionMap.put(id, subscription);
-
-        return subscription;
+    public final <S> Subscription subscribeAsync(String id, Observable<S> observable) {
+        return subscribe(id, observable, Schedulers.io(), AndroidSchedulers.mainThread());
     }
 
     /**
@@ -124,48 +118,50 @@ public class ObservationObserver<T> implements
      *
      * @param id the id used to identify the observable when it completes
      */
-    public <S> Subscription subscribeAsync(String id, Observable<S> observable) {
-        Observable<Observation<T>> observation = create(id, observable);
+    public final <S> Subscription subscribe(String id, Observable<S> observable,
+                                            Scheduler subscribeOn, Scheduler observeOn) {
 
-        Subscription subscription = subscribeAsync(observation);
+        ConnectableObservable<Observation<T>> observationObservable = create(id, observable)
+                .timeout(TIMEOUT, TimeUnit.SECONDS)
+                .subscribeOn(subscribeOn)
+                .observeOn(observeOn)
+                .publish();
+
+        observationObservable.subscribe(this);
+        subscriptionMap.subscribe(id, observationObservable);
+
+        Subscription subscription = observationObservable.connect();
         subscriptionMap.put(id, subscription);
 
         return subscription;
     }
 
-    protected Subscription subscribe(Observable<Observation<T>> observation) {
-        return observation.timeout(TIMEOUT, TimeUnit.SECONDS)
-                .subscribe(this);
-    }
-
-    protected Subscription subscribeAsync(Observable<Observation<T>> observation) {
-        return observation.subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .timeout(TIMEOUT, TimeUnit.SECONDS)
-                .subscribe(this);
+    public static <T> Subscription shareObservableAsync(final String id, Observable<T> observable,
+                                                        final ObservationObserver... observers) {
+        return shareObservable(id, observable, Schedulers.io(), AndroidSchedulers.mainThread(), observers);
     }
 
     /**
      * Shares an observable with all observers included, all observers will get all events of
      * the source observable
      *
-     * @param observationID String id as specified in {@link Observation#getId()}
+     * @param id String id as specified in {@link Observation#getId()}
      * @param observable The {@link Observable} to watch
      * @param observers All {@link ObservationObserver}s waiting to react
      */
-    public static <T> void shareObservableAsync(final String observationID, Observable<T> observable,
-                                                final ObservationObserver... observers) {
+    public static <T> Subscription shareObservable(final String id, Observable<T> observable,
+                                                   Scheduler subscribeOn, Scheduler observeOn,
+                                                   final ObservationObserver... observers) {
 
         // Create ConnectableObservable to allow multiple observers
         final ConnectableObservable<T> connObs = observable.publish();
 
         // Subscribe all observers to the same observable.
         for (ObservationObserver observer : observers) {
-            if (observer != null)
-                observer.subscribeAsync(observationID, connObs);
+            if (observer != null) observer.subscribe(id, observable, subscribeOn, observeOn);
         }
 
-        connObs.connect();
+        return connObs.connect();
     }
 
     /**
@@ -191,4 +187,5 @@ public class ObservationObserver<T> implements
                     }
                 });
     }
+
 }
