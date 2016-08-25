@@ -8,14 +8,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.tunjid.rxobservation.Observation;
+import com.tunjid.rxobservation.ThrowableWrapper;
 import com.tunjid.rxobservation.sample.R;
 import com.tunjid.rxobservation.sample.baseclasses.BaseFragment;
 import com.tunjid.rxobservation.sample.model.User;
 
 import java.util.ArrayList;
-
-import rx.Observable;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -23,11 +21,9 @@ import rx.Observable;
 public class TextFragment extends BaseFragment {
 
     public static final String TEST_ASYNC = "TEST_ASYNC";
-    public static final String TEST_SYNC = "TEST_SYNC";
     public static final String TEST_WEB = "TEST_WEB";
     public static final String TEST_404 = "TEST_404";
 
-    long count = -1;
     TextView textView;
 
     public TextFragment() {
@@ -49,25 +45,15 @@ public class TextFragment extends BaseFragment {
     }
 
     @Override
-    public void proceed(Observation<Object> observation) {
-        switch (observation.getId()) {
+    public void proceed(String id, Object object) {
+        switch (id) {
             case TEST_ASYNC:
-                String string1 = String.valueOf((long) observation.getObservedObject());
+                String string1 = String.valueOf((long) object);
                 textView.setText(string1);
                 break;
-            case TEST_SYNC:
-                String string2 = String.valueOf((long) observation.getObservedObject());
-                textView.setText(string2);
 
-                textView.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        observer.subscribe(TEST_SYNC, Observable.just(++count));
-                    }
-                }, 1000);
-                break;
             case TEST_WEB:
-                ArrayList<User> users = (ArrayList<User>) observation.getObservedObject();
+                ArrayList<User> users = (ArrayList<User>) object;
                 textView.setText(users.get(0).getUsername());
                 break;
         }
@@ -75,19 +61,23 @@ public class TextFragment extends BaseFragment {
     }
 
     @Override
-    public void resolve(Observation<Object> observation) {
-        switch (observation.getId()) {
-            case TEST_404:
-                if (observation.getObservedObject() instanceof Throwable) {
-                    Throwable throwable = (Throwable) observation.getObservedObject();
-                    throwable.printStackTrace();
+    public void resolve(String id, Object object) {
 
-                    if (throwable.getMessage() != null && getView() != null) {
-                        Snackbar.make(getView(), throwable.getMessage(), Snackbar.LENGTH_SHORT).show();
-                    }
+    }
+
+    @Override
+    public void onError(String id, ThrowableWrapper throwableWrapper) {
+        super.onError(id, throwableWrapper);
+
+        switch (id) {
+            case TEST_404:
+                Throwable throwable = throwableWrapper.getThrowable();
+                throwable.printStackTrace();
+
+                if (throwable.getMessage() != null && getView() != null) {
+                    Snackbar.make(getView(), throwable.getMessage(), Snackbar.LENGTH_SHORT).show();
                 }
                 break;
         }
-
     }
 }

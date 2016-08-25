@@ -2,12 +2,10 @@ package com.tunjid.rxobservation.sample.baseclasses;
 
 import android.support.v4.app.Fragment;
 
-import com.tunjid.rxobservation.Observation;
 import com.tunjid.rxobservation.ObservationAction;
-import com.tunjid.rxobservation.ObservationMapper;
 import com.tunjid.rxobservation.ObservationObserver;
-
-import lombok.Getter;
+import com.tunjid.rxobservation.ThrowableWrapper;
+import com.tunjid.rxobservation.sample.observation.SampleMapper;
 
 /**
  * Created by tj.dahunsi on 8/17/16.
@@ -17,8 +15,12 @@ import lombok.Getter;
 public abstract class BaseFragment extends Fragment
         implements ObservationAction<Object> {
 
-    @Getter
-    protected ObservationObserver observer = new ObservationObserver<>(new ObservationMapper.DefaultMapper(), this);
+
+    protected ObservationObserver observer = new ObservationObserver<>(new SampleMapper<>(), this);
+
+    public ObservationObserver getObserver() {
+        return observer;
+    }
 
     @Override
     public void onDestroyView() {
@@ -27,12 +29,17 @@ public abstract class BaseFragment extends Fragment
     }
 
     @Override
-    public void proceed(Observation<?> observation) {
+    public void proceed(String id, Object o) {
 
     }
 
     @Override
-    public void resolve(Observation<?> observation) {
+    public void resolve(String id, Object o) {
+
+    }
+
+    @Override
+    public void onError(String id, ThrowableWrapper throwableWrapper) {
 
     }
 }

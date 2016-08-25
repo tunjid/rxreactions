@@ -2,10 +2,10 @@ package com.tunjid.rxobservation.sample.baseclasses;
 
 import android.support.v7.app.AppCompatActivity;
 
-import com.tunjid.rxobservation.Observation;
 import com.tunjid.rxobservation.ObservationAction;
-import com.tunjid.rxobservation.ObservationMapper;
 import com.tunjid.rxobservation.ObservationObserver;
+import com.tunjid.rxobservation.ThrowableWrapper;
+import com.tunjid.rxobservation.sample.observation.SampleMapper;
 
 /**
  * Created by tj.dahunsi on 8/17/16.
@@ -15,7 +15,7 @@ import com.tunjid.rxobservation.ObservationObserver;
 public abstract class BaseActivity extends AppCompatActivity
         implements ObservationAction {
 
-    protected ObservationObserver observer = new ObservationObserver(new ObservationMapper.DefaultMapper(), this);
+    protected ObservationObserver observer = new ObservationObserver(new SampleMapper(), this);
 
 
     @Override
@@ -25,12 +25,17 @@ public abstract class BaseActivity extends AppCompatActivity
     }
 
     @Override
-    public void proceed(Observation observation) {
-        // Overidden in subclasses
+    public void proceed(String id, Object o) {
+
     }
 
     @Override
-    public void resolve(Observation observation) {
-        // Overidden in subclasses
+    public void resolve(String id, Object o) {
+
+    }
+
+    @Override
+    public void onError(String id, ThrowableWrapper throwableWrapper) {
+
     }
 }

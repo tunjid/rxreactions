@@ -6,19 +6,14 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 
-import com.tunjid.rxobservation.Observation;
 import com.tunjid.rxobservation.ObservationObserver;
 import com.tunjid.rxobservation.sample.R;
 import com.tunjid.rxobservation.sample.baseclasses.BaseActivity;
 import com.tunjid.rxobservation.sample.fragments.TextFragment;
 import com.tunjid.rxobservation.sample.rest.TestClient;
 
-import java.util.concurrent.TimeUnit;
-
-import rx.Observable;
-
 import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_404;
-import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_WEB;
+import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_ASYNC;
 
 public class MainActivity extends BaseActivity {
 
@@ -44,29 +39,13 @@ public class MainActivity extends BaseActivity {
             }
         });
 
-        Observable intervalObservable = Observable.interval(1, TimeUnit.SECONDS);
 
-        //one.getObserver().subscribeAsync(TEST_ASYNC, intervalObservable);
-        //two.getObserver().subscribe(TEST_SYNC, Observable.just(-1L));
-
-        //ObservationObserver.shareObservableAsync(TEST_ASYNC, intervalObservable, three.getObserver(), four.getObserver());
-
-        ObservationObserver.shareObservableAsync(TEST_WEB, TestClient.getTestApi().getUsers(),
+        ObservationObserver.shareObservableAsync(TEST_ASYNC, TestClient.getTestApi().getUsers(),
                 one.getObserver(), two.getObserver(),
                 three.getObserver(), four.getObserver());
 
         ObservationObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
                 one.getObserver(), two.getObserver(),
                 three.getObserver(), four.getObserver());
-    }
-
-    @Override
-    public void proceed(Observation observation) {
-        super.proceed(observation);
-    }
-
-    @Override
-    public void resolve(Observation observation) {
-        super.resolve(observation);
     }
 }

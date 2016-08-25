@@ -1,5 +1,6 @@
 package com.tunjid.rxobservation;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
@@ -7,26 +8,24 @@ import rx.Observer;
 import rx.Scheduler;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
 import rx.schedulers.Schedulers;
 
 /**
  * Created by tj.dahunsi on 8/15/16.
- * An {@link Observer} that observes {@link Observation}s
+ * An {@link Observer} that observes events
  */
 
 public class ObservationObserver<T>
         implements
-        ObservationAction<T>,
-        Observer<Observation<T>> {
+        ObservationAction<T> {
 
     private static final int TIMEOUT = BuildConfig.DEBUG ? 3 : 12;
 
     /**
      * A Mapping of all the observations this observer is yet to make
      */
-    private ReactiveSubscriptionMap<T> subscriptionMap = new ReactiveSubscriptionMap<>();
+    private HashMap<String, DiscreteObserver> subscriptionMap = new HashMap<>();
 
     /**
      * A mapper used for deciding what happens after {@link Observer#onNext(Object)} is called
@@ -41,10 +40,10 @@ public class ObservationObserver<T>
 
     /**
      * This constructor is used when the {@link ObservationObserver} wants to carry out post
-     * {@link Observation} actions itself.
+     * {@link ObservationAction}s itself.
      *
-     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(Observation)}
-     * or {@link ObservationAction#resolve(Observation)}
+     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(String, Object)}
+     * or {@link ObservationAction#resolve(String, Object)}
      */
     public ObservationObserver(ObservationMapper<T> mapper) {
         this.mapper = mapper;
@@ -53,54 +52,42 @@ public class ObservationObserver<T>
 
     /**
      * This constructor is used when the {@link ObservationObserver} wants to delegate post
-     * {@link Observation} actions another {@link ObservationAction}.
+     * {@link ObservationAction}s another {@link ObservationAction}.
      *
-     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(Observation)}
-     * or {@link ObservationAction#resolve(Observation)}
+     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(String, Object)}
+     * or {@link ObservationAction#resolve(String, Object)}
      */
     public ObservationObserver(ObservationMapper<T> mapper, ObservationAction<T> action) {
         this.mapper = mapper;
         this.action = action;
     }
 
-    public void proceed(Observation observation) {
-
+    public void proceed(String id, T t) {
+        // Override as necessary
     }
 
-    public void resolve(Observation observation) {
-
-    }
-
-    @Override
-    public void onNext(Observation<T> observation) {
-        if (action == null) throw new NullPointerException("Action cannot be null");
-
-        if (mapper.canProceed(observation)) action.proceed(observation);
-        else action.resolve(observation);
+    public void resolve(String id, T t) {
+        // Override as necessary
     }
 
     @Override
-    public void onError(Throwable e) {
-        e.printStackTrace();
-    }
-
-    @Override
-    public void onCompleted() {
-
+    public void onError(String id, ThrowableWrapper throwableWrapper) {
+        // Override as necessary
     }
 
     /**
      * Unsubscribe from the observation with the specified id
      */
     public void unsubscribe(String id) {
-        subscriptionMap.unsubscribe(id);
+        DiscreteObserver observer = subscriptionMap.get(id);
+        if (observer != null) observer.unsubscribe();
     }
 
     /**
      * Unsubscribes from all observations
      */
     public void unsubscribeFromAll() {
-        subscriptionMap.unsubscribeFromAll();
+        for (String id : subscriptionMap.keySet()) unsubscribe(id);
     }
 
 
@@ -109,7 +96,7 @@ public class ObservationObserver<T>
      *
      * @param id the id used to identify the observable when it completes
      */
-    public final <S> Subscription subscribeAsync(String id, Observable<S> observable) {
+    public final Subscription subscribeAsync(String id, Observable<T> observable) {
         return subscribe(id, observable, Schedulers.io(), AndroidSchedulers.mainThread());
     }
 
@@ -118,22 +105,16 @@ public class ObservationObserver<T>
      *
      * @param id the id used to identify the observable when it completes
      */
-    public final <S> Subscription subscribe(String id, Observable<S> observable,
-                                            Scheduler subscribeOn, Scheduler observeOn) {
+    public final Subscription subscribe(String id, Observable<T> observable,
+                                        Scheduler subscribeOn, Scheduler observeOn) {
 
-        ConnectableObservable<Observation<T>> observationObservable = create(id, observable)
-                .timeout(TIMEOUT, TimeUnit.SECONDS)
-                .subscribeOn(subscribeOn)
-                .observeOn(observeOn)
-                .publish();
+        DiscreteObserver observer = subscriptionMap.get(id) != null
+                ? subscriptionMap.get(id)
+                : new DiscreteObserver(id);
 
-        observationObservable.subscribe(this);
-        subscriptionMap.subscribe(id, observationObservable);
+        observer.unsubscribe();
 
-        Subscription subscription = observationObservable.connect();
-        subscriptionMap.put(id, subscription);
-
-        return subscription;
+        return observer.subscribe(observable, subscribeOn, observeOn);
     }
 
     public static <T> Subscription shareObservableAsync(final String id, Observable<T> observable,
@@ -145,7 +126,7 @@ public class ObservationObserver<T>
      * Shares an observable with all observers included, all observers will get all events of
      * the source observable
      *
-     * @param id String id as specified in {@link Observation#getId()}
+     * @param id String id
      * @param observable The {@link Observable} to watch
      * @param observers All {@link ObservationObserver}s waiting to react
      */
@@ -164,28 +145,46 @@ public class ObservationObserver<T>
         return connObs.connect();
     }
 
-    /**
-     * Used to observe emmisions of {@link Observation}
-     *
-     * @param id The id used to identify the kind of this observable
-     * @param observable The observable that will emit an object defined in the api call
-     * @return An {@link Observation} containing the object produced from the asynchronous event
-     */
-    private <S> Observable<Observation<T>> create(final String id, final Observable<S> observable) {
 
-        return observable
-                .flatMap(new Func1<S, Observable<? extends Observation<T>>>() {
-                    @Override
-                    public Observable<? extends Observation<T>> call(S observedOjbect) {
-                        return mapper.onNext(id, observedOjbect);
-                    }
-                })
-                .onErrorReturn(new Func1<Throwable, Observation<T>>() {
-                    @Override
-                    public Observation<T> call(Throwable thrown) {
-                        return mapper.onError(id, thrown);
-                    }
-                });
+    class DiscreteObserver implements Observer<T> {
+
+        String id;
+        Subscription subscription;
+
+        DiscreteObserver(String id) {
+            this.id = id;
+        }
+
+        Subscription subscribe(Observable<T> observable, Scheduler subscribeOn, Scheduler observeOn) {
+            subscription = observable.timeout(TIMEOUT, TimeUnit.SECONDS)
+                    .subscribeOn(subscribeOn)
+                    .observeOn(observeOn)
+                    .subscribe(this);
+
+            return subscription;
+        }
+
+        void unsubscribe() {
+            if (subscription != null && !subscription.isUnsubscribed()) subscription.unsubscribe();
+        }
+
+        @Override
+        public void onCompleted() {
+            subscriptionMap.remove(id);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            subscriptionMap.remove(id);
+            action.onError(id, mapper.getThrowableWrapper(throwable));
+        }
+
+        @Override
+        public void onNext(T observedObject) {
+            if (mapper.canProceed(observedObject)) action.proceed(id, observedObject);
+            else action.resolve(id, observedObject);
+        }
     }
+
 
 }
