@@ -6,14 +6,14 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 
-import com.tunjid.rxobservation.ObservationObserver;
+import com.tunjid.rxobservation.ReactingObserver;
 import com.tunjid.rxobservation.sample.R;
 import com.tunjid.rxobservation.sample.baseclasses.BaseActivity;
 import com.tunjid.rxobservation.sample.fragments.TextFragment;
 import com.tunjid.rxobservation.sample.rest.TestClient;
 
 import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_404;
-import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_ASYNC;
+import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_WEB;
 
 public class MainActivity extends BaseActivity {
 
@@ -39,12 +39,17 @@ public class MainActivity extends BaseActivity {
             }
         });
 
+        /*
+        ReactingObserver.shareObservableAsync(TEST_ASYNC, Observable.interval(1, TimeUnit.SECONDS),
+                one.getObserver(), two.getObserver(),
+                three.getObserver(), four.getObserver());
+        */
 
-        ObservationObserver.shareObservableAsync(TEST_ASYNC, TestClient.getTestApi().getUsers(),
+        ReactingObserver.shareObservableAsync(TEST_WEB, TestClient.getTestApi().getUsers(),
                 one.getObserver(), two.getObserver(),
                 three.getObserver(), four.getObserver());
 
-        ObservationObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
+        ReactingObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
                 one.getObserver(), two.getObserver(),
                 three.getObserver(), four.getObserver());
     }

@@ -8,9 +8,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.tunjid.rxobservation.ThrowableWrapper;
 import com.tunjid.rxobservation.sample.R;
 import com.tunjid.rxobservation.sample.baseclasses.BaseFragment;
+import com.tunjid.rxobservation.sample.model.Error;
 import com.tunjid.rxobservation.sample.model.User;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class TextFragment extends BaseFragment {
     }
 
     @Override
-    public void proceed(String id, Object object) {
+    public void onNext(String id, Object object) {
         switch (id) {
             case TEST_ASYNC:
                 String string1 = String.valueOf((long) object);
@@ -61,22 +61,12 @@ public class TextFragment extends BaseFragment {
     }
 
     @Override
-    public void resolve(String id, Object object) {
-
-    }
-
-    @Override
-    public void onError(String id, ThrowableWrapper throwableWrapper) {
-        super.onError(id, throwableWrapper);
+    public void onError(String id, Error error) {
+        super.onError(id, error);
 
         switch (id) {
             case TEST_404:
-                Throwable throwable = throwableWrapper.getThrowable();
-                throwable.printStackTrace();
-
-                if (throwable.getMessage() != null && getView() != null) {
-                    Snackbar.make(getView(), throwable.getMessage(), Snackbar.LENGTH_SHORT).show();
-                }
+                Snackbar.make(getView(), error.getMessage(), Snackbar.LENGTH_SHORT).show();
                 break;
         }
     }

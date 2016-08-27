@@ -13,65 +13,61 @@ import rx.schedulers.Schedulers;
 
 /**
  * Created by tj.dahunsi on 8/15/16.
- * An {@link Observer} that observes events
+ * An {@link Reaction} that observes events linked to a certain String id
  */
 
-public class ObservationObserver<T>
+public class ReactingObserver<T, E>
         implements
-        ObservationAction<T> {
+        Reaction<T, E> {
 
     private static final int TIMEOUT = BuildConfig.DEBUG ? 3 : 12;
 
     /**
      * A Mapping of all the observations this observer is yet to make
      */
-    private HashMap<String, DiscreteObserver> subscriptionMap = new HashMap<>();
+    private HashMap<String, TrackingObserver> subscriptionMap = new HashMap<>();
 
     /**
      * A mapper used for deciding what happens after {@link Observer#onNext(Object)} is called
      */
-    private ObservationMapper<T> mapper;
+    private ReactionMapper<T, E> mapper;
 
     /**
      * An action to complete post observation.
      */
-    private ObservationAction<T> action;
+    private Reaction<T, E> action;
 
 
     /**
-     * This constructor is used when the {@link ObservationObserver} wants to carry out post
-     * {@link ObservationAction}s itself.
+     * This constructor is used when the {@link ReactingObserver} wants to carry out post
+     * {@link Reaction}s itself.
      *
-     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(String, Object)}
-     * or {@link ObservationAction#resolve(String, Object)}
+     * @param mapper filters observations to decide whether to {@link Reaction#onNext(String, Object)}
+     * or {@link Reaction#onError(String, Object)}
      */
-    public ObservationObserver(ObservationMapper<T> mapper) {
+    public ReactingObserver(ReactionMapper<T, E> mapper) {
         this.mapper = mapper;
         this.action = this;
     }
 
     /**
-     * This constructor is used when the {@link ObservationObserver} wants to delegate post
-     * {@link ObservationAction}s another {@link ObservationAction}.
+     * This constructor is used when the {@link ReactingObserver} wants to delegate post
+     * {@link Reaction}s another {@link Reaction}.
      *
-     * @param mapper filters observations to decide whether to {@link ObservationAction#proceed(String, Object)}
-     * or {@link ObservationAction#resolve(String, Object)}
+     * @param mapper filters observations to decide whether to {@link Reaction#onNext(String, Object)}
+     * or {@link Reaction#onError(String, Object)}
      */
-    public ObservationObserver(ObservationMapper<T> mapper, ObservationAction<T> action) {
+    public ReactingObserver(ReactionMapper<T, E> mapper, Reaction<T, E> action) {
         this.mapper = mapper;
         this.action = action;
     }
 
-    public void proceed(String id, T t) {
-        // Override as necessary
-    }
-
-    public void resolve(String id, T t) {
+    public void onNext(String id, T observedType) {
         // Override as necessary
     }
 
     @Override
-    public void onError(String id, ThrowableWrapper throwableWrapper) {
+    public void onError(String id, E errorType) {
         // Override as necessary
     }
 
@@ -79,7 +75,7 @@ public class ObservationObserver<T>
      * Unsubscribe from the observation with the specified id
      */
     public void unsubscribe(String id) {
-        DiscreteObserver observer = subscriptionMap.get(id);
+        TrackingObserver observer = subscriptionMap.get(id);
         if (observer != null) observer.unsubscribe();
     }
 
@@ -108,17 +104,18 @@ public class ObservationObserver<T>
     public final Subscription subscribe(String id, Observable<T> observable,
                                         Scheduler subscribeOn, Scheduler observeOn) {
 
-        DiscreteObserver observer = subscriptionMap.get(id) != null
+        TrackingObserver observer = subscriptionMap.get(id) != null
                 ? subscriptionMap.get(id)
-                : new DiscreteObserver(id);
+                : new TrackingObserver(id);
 
         observer.unsubscribe();
 
         return observer.subscribe(observable, subscribeOn, observeOn);
     }
 
-    public static <T> Subscription shareObservableAsync(final String id, Observable<T> observable,
-                                                        final ObservationObserver... observers) {
+    @SafeVarargs
+    public static <T, E> Subscription shareObservableAsync(final String id, Observable<T> observable,
+                                                           final ReactingObserver<T, E>... observers) {
         return shareObservable(id, observable, Schedulers.io(), AndroidSchedulers.mainThread(), observers);
     }
 
@@ -128,34 +125,37 @@ public class ObservationObserver<T>
      *
      * @param id String id
      * @param observable The {@link Observable} to watch
-     * @param observers All {@link ObservationObserver}s waiting to react
+     * @param observers All {@link ReactingObserver}s waiting to react
      */
-    public static <T> Subscription shareObservable(final String id, Observable<T> observable,
-                                                   Scheduler subscribeOn, Scheduler observeOn,
-                                                   final ObservationObserver... observers) {
+    @SafeVarargs
+    public static <T, E> Subscription shareObservable(final String id, Observable<T> observable,
+                                                      Scheduler subscribeOn, Scheduler observeOn,
+                                                      final ReactingObserver<T, E>... observers) {
 
         // Create ConnectableObservable to allow multiple observers
         final ConnectableObservable<T> connObs = observable.publish();
 
         // Subscribe all observers to the same observable.
-        for (ObservationObserver observer : observers) {
+        for (ReactingObserver<T, E> observer : observers) {
             if (observer != null) observer.subscribe(id, observable, subscribeOn, observeOn);
         }
 
         return connObs.connect();
     }
 
-
-    class DiscreteObserver implements Observer<T> {
+    /**
+     * An {@link Observer} that maps each subcription to a String ID
+     */
+    private class TrackingObserver implements Observer<T> {
 
         String id;
         Subscription subscription;
 
-        DiscreteObserver(String id) {
+        private TrackingObserver(String id) {
             this.id = id;
         }
 
-        Subscription subscribe(Observable<T> observable, Scheduler subscribeOn, Scheduler observeOn) {
+        private Subscription subscribe(Observable<T> observable, Scheduler subscribeOn, Scheduler observeOn) {
             subscription = observable.timeout(TIMEOUT, TimeUnit.SECONDS)
                     .subscribeOn(subscribeOn)
                     .observeOn(observeOn)
@@ -164,7 +164,7 @@ public class ObservationObserver<T>
             return subscription;
         }
 
-        void unsubscribe() {
+        private void unsubscribe() {
             if (subscription != null && !subscription.isUnsubscribed()) subscription.unsubscribe();
         }
 
@@ -176,15 +176,13 @@ public class ObservationObserver<T>
         @Override
         public void onError(Throwable throwable) {
             subscriptionMap.remove(id);
-            action.onError(id, mapper.getThrowableWrapper(throwable));
+            action.onError(id, mapper.getErrorResponse(throwable));
         }
 
         @Override
         public void onNext(T observedObject) {
-            if (mapper.canProceed(observedObject)) action.proceed(id, observedObject);
-            else action.resolve(id, observedObject);
+            if (mapper.getErrorResponse(observedObject) == null) action.onNext(id, observedObject);
+            else action.onError(id, mapper.getErrorResponse(observedObject));
         }
     }
-
-
 }

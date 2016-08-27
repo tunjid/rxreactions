@@ -2,10 +2,10 @@ package com.tunjid.rxobservation.sample.baseclasses;
 
 import android.support.v4.app.Fragment;
 
-import com.tunjid.rxobservation.ObservationAction;
-import com.tunjid.rxobservation.ObservationObserver;
-import com.tunjid.rxobservation.ThrowableWrapper;
-import com.tunjid.rxobservation.sample.observation.SampleMapper;
+import com.tunjid.rxobservation.ReactingObserver;
+import com.tunjid.rxobservation.Reaction;
+import com.tunjid.rxobservation.sample.model.Error;
+import com.tunjid.rxobservation.sample.reaction.SampleMapper;
 
 /**
  * Created by tj.dahunsi on 8/17/16.
@@ -13,12 +13,12 @@ import com.tunjid.rxobservation.sample.observation.SampleMapper;
  */
 
 public abstract class BaseFragment extends Fragment
-        implements ObservationAction<Object> {
+        implements Reaction<Object, Error> {
 
 
-    protected ObservationObserver observer = new ObservationObserver<>(new SampleMapper<>(), this);
+    protected ReactingObserver observer = new ReactingObserver<>(new SampleMapper(), this);
 
-    public ObservationObserver getObserver() {
+    public ReactingObserver getObserver() {
         return observer;
     }
 
@@ -29,17 +29,12 @@ public abstract class BaseFragment extends Fragment
     }
 
     @Override
-    public void proceed(String id, Object o) {
+    public void onNext(String id, Object o) {
 
     }
 
     @Override
-    public void resolve(String id, Object o) {
-
-    }
-
-    @Override
-    public void onError(String id, ThrowableWrapper throwableWrapper) {
+    public void onError(String id, Error error) {
 
     }
 }
