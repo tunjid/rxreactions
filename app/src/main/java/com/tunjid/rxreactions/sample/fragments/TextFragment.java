@@ -1,4 +1,4 @@
-package com.tunjid.rxobservation.sample.fragments;
+package com.tunjid.rxreactions.sample.fragments;
 
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
@@ -8,12 +8,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.tunjid.rxobservation.ReactingObserver;
-import com.tunjid.rxobservation.Reactor;
-import com.tunjid.rxobservation.sample.R;
-import com.tunjid.rxobservation.sample.model.Error;
-import com.tunjid.rxobservation.sample.model.User;
-import com.tunjid.rxobservation.sample.reaction.SampleMapper;
+import com.tunjid.rxreactions.ReactingObserver;
+import com.tunjid.rxreactions.Reactor;
+import com.tunjid.rxreactions.sample.R;
+import com.tunjid.rxreactions.sample.model.Error;
+import com.tunjid.rxreactions.sample.model.User;
+import com.tunjid.rxreactions.sample.reaction.SampleMapper;
 
 import java.util.ArrayList;
 

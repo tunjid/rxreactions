@@ -1,4 +1,4 @@
-package com.tunjid.rxobservation;
+package com.tunjid.rxreactions;
 
 /**
  * Created by tj.dahunsi on 8/16/16.

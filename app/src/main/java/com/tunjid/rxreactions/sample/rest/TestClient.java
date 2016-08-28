@@ -1,7 +1,7 @@
-package com.tunjid.rxobservation.sample.rest;
+package com.tunjid.rxreactions.sample.rest;
 
 import com.google.gson.Gson;
-import com.tunjid.rxobservation.sample.model.User;
+import com.tunjid.rxreactions.sample.model.User;
 
 import java.util.ArrayList;
 

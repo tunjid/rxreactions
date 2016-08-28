@@ -1,4 +1,4 @@
-package com.tunjid.rxobservation.sample.model;
+package com.tunjid.rxreactions.sample.model;
 
 import android.util.Log;
 

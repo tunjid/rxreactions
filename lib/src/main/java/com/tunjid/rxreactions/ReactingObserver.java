@@ -1,4 +1,4 @@
-package com.tunjid.rxobservation;
+package com.tunjid.rxreactions;
 
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -13,15 +13,16 @@ import rx.schedulers.Schedulers;
 
 /**
  * Created by tj.dahunsi on 8/15/16.
- * An {@link Reactor} that observes events linked to a certain String id
+ * An object that observes events linked to a certain String id
  */
 
 public class ReactingObserver<T, E> {
 
-    private static final int TIMEOUT = 25;
+    int timeout;
+    TimeUnit timeUnit;
 
     /**
-     * A Mapping of all the observations this observer is yet to make
+     * A Mapping of String ids to Observers
      */
     private HashMap<String, TrackingObserver> subscriptionMap = new HashMap<>();
 
@@ -31,18 +32,30 @@ public class ReactingObserver<T, E> {
     private ReactionMapper<T, E> mapper;
 
     /**
-     * An action to complete post observation.
+     * An reactor to react to the events produced.
      */
-    private Reactor<T, E> action;
+    private Reactor<T, E> reactor;
 
 
     /**
      * @param mapper filters {@link T} to decide whether to {@link Reactor#onNext(String, Object)}
-     * or {@link Reactor#onError(String, Object)} should be called
+     * or {@link Reactor#onError(String, Object)} should be called.
+     * @param reactor ab object that reactsto the emissions of the {@link Observable}s subscribed to
      */
-    public ReactingObserver(ReactionMapper<T, E> mapper, Reactor<T, E> action) {
+    public ReactingObserver(ReactionMapper<T, E> mapper, Reactor<T, E> reactor) {
         this.mapper = mapper;
-        this.action = action;
+        this.reactor = reactor;
+    }
+
+    /**
+     * Set the timeout for the observables observed
+     *
+     * @param timeout the time out duration, or 0 to ignore
+     * @param timeUnit the time unit for the duration or null to ignore
+     */
+    public void setTimeout(int timeout, TimeUnit timeUnit) {
+        this.timeout = timeout;
+        this.timeUnit = timeUnit;
     }
 
     /**
@@ -82,6 +95,7 @@ public class ReactingObserver<T, E> {
                 ? subscriptionMap.get(id)
                 : new TrackingObserver(id);
 
+        // Unsubscribe if this observer was subscribed to something before to allow resuse.
         observer.unsubscribe();
 
         return observer.subscribe(observable, subscribeOn, observeOn);
@@ -130,7 +144,11 @@ public class ReactingObserver<T, E> {
         }
 
         private Subscription subscribe(Observable<T> observable, Scheduler subscribeOn, Scheduler observeOn) {
-            subscription = observable.timeout(TIMEOUT, TimeUnit.SECONDS)
+
+            if (timeout != 0 && timeUnit != null)
+                observable = observable.timeout(timeout, timeUnit);
+
+            subscription = observable
                     .subscribeOn(subscribeOn)
                     .observeOn(observeOn)
                     .subscribe(this);
@@ -144,21 +162,24 @@ public class ReactingObserver<T, E> {
 
         @Override
         public void onCompleted() {
+            // remove this observer from the map
             subscriptionMap.remove(id);
         }
 
         @Override
         public void onError(Throwable throwable) {
+            // remove this observer from the map
             subscriptionMap.remove(id);
-            action.onError(id, mapper.getErrorObject(throwable));
+
+            reactor.onError(id, mapper.getErrorObject(throwable));
         }
 
         @Override
         public void onNext(T observedObject) {
             E errorObject = mapper.checkForError(observedObject);
 
-            if (errorObject == null) action.onNext(id, observedObject);
-            else action.onError(id, errorObject);
+            if (errorObject == null) reactor.onNext(id, observedObject);
+            else reactor.onError(id, errorObject);
         }
     }
 }

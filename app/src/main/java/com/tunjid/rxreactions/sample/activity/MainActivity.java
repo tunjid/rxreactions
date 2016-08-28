@@ -1,4 +1,4 @@
-package com.tunjid.rxobservation.sample.activity;
+package com.tunjid.rxreactions.sample.activity;
 
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -7,20 +7,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 
-import com.tunjid.rxobservation.ReactingObserver;
-import com.tunjid.rxobservation.Reactor;
-import com.tunjid.rxobservation.sample.R;
-import com.tunjid.rxobservation.sample.fragments.TextFragment;
-import com.tunjid.rxobservation.sample.model.Error;
-import com.tunjid.rxobservation.sample.reaction.SampleMapper;
-import com.tunjid.rxobservation.sample.rest.TestClient;
+import com.tunjid.rxreactions.ReactingObserver;
+import com.tunjid.rxreactions.Reactor;
+import com.tunjid.rxreactions.sample.R;
+import com.tunjid.rxreactions.sample.fragments.TextFragment;
+import com.tunjid.rxreactions.sample.model.Error;
+import com.tunjid.rxreactions.sample.reaction.SampleMapper;
+import com.tunjid.rxreactions.sample.rest.TestClient;
 
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 
-import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_404;
-import static com.tunjid.rxobservation.sample.fragments.TextFragment.TEST_WEB;
+import static com.tunjid.rxreactions.sample.fragments.TextFragment.TEST_404;
+import static com.tunjid.rxreactions.sample.fragments.TextFragment.TEST_WEB;
+import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_OUT;
+import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_UNIT;
 
 public class MainActivity extends AppCompatActivity
         implements Reactor<Long, Error> {
@@ -51,7 +53,10 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
-        fabObserver.subscribeAsync("", Observable.interval(25, TimeUnit.MILLISECONDS).onBackpressureDrop());
+        fabObserver.setTimeout(DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT);
+        fabObserver.subscribeAsync("", Observable.interval(25, TimeUnit.MILLISECONDS)
+                // Emiits frequently. Drop values if we can't react quickly enough
+                .onBackpressureDrop());
 
         ReactingObserver.shareObservableAsync(TEST_WEB, TestClient.getTestApi().getUsers(),
                 one.getObserver(), two.getObserver(),

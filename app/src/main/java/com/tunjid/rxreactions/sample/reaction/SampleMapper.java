@@ -1,7 +1,9 @@
-package com.tunjid.rxobservation.sample.reaction;
+package com.tunjid.rxreactions.sample.reaction;
 
-import com.tunjid.rxobservation.ReactionMapper;
-import com.tunjid.rxobservation.sample.model.Error;
+import com.tunjid.rxreactions.ReactionMapper;
+import com.tunjid.rxreactions.sample.model.Error;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by tj.dahunsi on 8/25/16.
@@ -9,6 +11,8 @@ import com.tunjid.rxobservation.sample.model.Error;
  */
 public class SampleMapper<T> implements ReactionMapper<T, Error> {
 
+    public static final int DEFAULT_TIME_OUT = 12;
+    public static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.SECONDS;
 
     @Override
     public Error checkForError(T observedObject) {
