@@ -1,7 +1,6 @@
 package com.tunjid.rxreactions.sample.fragments;
 
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,23 +10,21 @@ import android.widget.TextView;
 import com.tunjid.rxreactions.ReactingObserver;
 import com.tunjid.rxreactions.Reactor;
 import com.tunjid.rxreactions.sample.R;
+import com.tunjid.rxreactions.sample.activity.MainActivity;
+import com.tunjid.rxreactions.sample.model.BaseModel;
 import com.tunjid.rxreactions.sample.model.Error;
 import com.tunjid.rxreactions.sample.model.User;
 import com.tunjid.rxreactions.sample.reaction.SampleMapper;
-
-import java.util.ArrayList;
 
 /**
  * A simple {@link Fragment} subclass.
  */
 public class TextFragment extends Fragment
-        implements Reactor<Object, Error> {
+        implements Reactor<BaseModel, Error> {
 
-    public static final String TEST_ASYNC = "TEST_ASYNC";
-    public static final String TEST_WEB = "TEST_WEB";
-    public static final String TEST_404 = "TEST_404";
+    ReactingObserver<BaseModel, Error> observer =
+            new ReactingObserver<>(new SampleMapper<BaseModel>(), this);
 
-    ReactingObserver observer = new ReactingObserver<>(new SampleMapper<>(), this);
     TextView textView;
 
     public TextFragment() {
@@ -49,16 +46,11 @@ public class TextFragment extends Fragment
     }
 
     @Override
-    public void onNext(String id, Object object) {
+    public void onNext(String id, BaseModel model) {
         switch (id) {
-            case TEST_ASYNC:
-                String string1 = String.valueOf((long) object);
-                textView.setText(string1);
-                break;
-
-            case TEST_WEB:
-                ArrayList<User> users = (ArrayList<User>) object;
-                textView.setText(users.get(0).getUsername());
+            case MainActivity.TEST_USER:
+                User user = (User) model;
+                textView.setText(user.getUsername());
                 break;
         }
 
@@ -66,16 +58,20 @@ public class TextFragment extends Fragment
 
     @Override
     public void onError(String id, Error error) {
-
         switch (id) {
-            case TEST_404:
-                if (getView() != null)
-                    Snackbar.make(getView(), error.getMessage(), Snackbar.LENGTH_SHORT).show();
+            case MainActivity.TEST_INVALID_USER:
+            case MainActivity.TEST_404:
+                textView.setText(error.getMessage());
                 break;
         }
     }
 
-    public ReactingObserver getObserver() {
+    @Override
+    public void onCompleted(String id) {
+
+    }
+
+    public ReactingObserver<BaseModel, Error> getObserver() {
         return observer;
     }
 }

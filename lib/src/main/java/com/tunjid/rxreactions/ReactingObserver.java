@@ -79,7 +79,7 @@ public class ReactingObserver<T, E> {
      *
      * @param id the id used to identify the observable when it completes
      */
-    public final Subscription subscribeAsync(String id, Observable<T> observable) {
+    public final Subscription subscribeAsync(String id, Observable<? extends T> observable) {
         return subscribe(id, observable, Schedulers.io(), AndroidSchedulers.mainThread());
     }
 
@@ -88,7 +88,7 @@ public class ReactingObserver<T, E> {
      *
      * @param id the id used to identify the observable when it completes
      */
-    public final Subscription subscribe(String id, Observable<T> observable,
+    public final Subscription subscribe(String id, Observable<? extends T> observable,
                                         Scheduler subscribeOn, Scheduler observeOn) {
 
         TrackingObserver observer = subscriptionMap.get(id) != null
@@ -102,8 +102,8 @@ public class ReactingObserver<T, E> {
     }
 
     @SafeVarargs
-    public static <T, E> Subscription shareObservableAsync(final String id, Observable<T> observable,
-                                                           final ReactingObserver<T, E>... observers) {
+    public static <T, E> Subscription shareObservableAsync(final String id, Observable<? extends T> observable,
+                                                           final ReactingObserver<? extends T, E>... observers) {
         return shareObservable(id, observable, Schedulers.io(), AndroidSchedulers.mainThread(), observers);
     }
 
@@ -116,16 +116,18 @@ public class ReactingObserver<T, E> {
      * @param observers All {@link ReactingObserver}s waiting to react
      */
     @SafeVarargs
-    public static <T, E> Subscription shareObservable(final String id, Observable<T> observable,
+    public static <T, E> Subscription shareObservable(String id, Observable<? extends T> observable,
                                                       Scheduler subscribeOn, Scheduler observeOn,
-                                                      final ReactingObserver<T, E>... observers) {
+                                                      ReactingObserver<? extends T, E>... observers) {
 
         // Create ConnectableObservable to allow multiple observers
-        final ConnectableObservable<T> connObs = observable.publish();
+        final ConnectableObservable<? extends T> connObs = observable.publish();
 
         // Subscribe all observers to the same observable.
-        for (ReactingObserver<T, E> observer : observers) {
-            if (observer != null) observer.subscribe(id, observable, subscribeOn, observeOn);
+        for (ReactingObserver<? extends T, E> observer : observers) {
+            if (observer != null) {
+                observer.subscribe(id, (Observable)connObs, subscribeOn, observeOn);
+            }
         }
 
         return connObs.connect();
@@ -136,14 +138,14 @@ public class ReactingObserver<T, E> {
      */
     private class TrackingObserver implements Observer<T> {
 
-        String id;
-        Subscription subscription;
+        private String id;
+        private Subscription subscription;
 
         private TrackingObserver(String id) {
             this.id = id;
         }
 
-        private Subscription subscribe(Observable<T> observable, Scheduler subscribeOn, Scheduler observeOn) {
+        private Subscription subscribe(Observable<? extends T> observable, Scheduler subscribeOn, Scheduler observeOn) {
 
             if (timeout != 0 && timeUnit != null)
                 observable = observable.timeout(timeout, timeUnit);
@@ -164,6 +166,7 @@ public class ReactingObserver<T, E> {
         public void onCompleted() {
             // remove this observer from the map
             subscriptionMap.remove(id);
+            reactor.onCompleted(id);
         }
 
         @Override

@@ -19,13 +19,15 @@ import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 
-import static com.tunjid.rxreactions.sample.fragments.TextFragment.TEST_404;
-import static com.tunjid.rxreactions.sample.fragments.TextFragment.TEST_WEB;
 import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_OUT;
 import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_UNIT;
 
 public class MainActivity extends AppCompatActivity
         implements Reactor<Long, Error> {
+
+    public static final String TEST_USER = "TEST_USER";
+    public static final String TEST_INVALID_USER = "TEST_INVALID_USER";
+    public static final String TEST_404 = "TEST_404";
 
     FloatingActionButton fab;
     ReactingObserver<Long, Error> fabObserver = new ReactingObserver<>(new SampleMapper<Long>(), this);
@@ -44,6 +46,8 @@ public class MainActivity extends AppCompatActivity
         TextFragment two = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.two);
         TextFragment three = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.three);
         TextFragment four = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.four);
+        TextFragment five = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.five);
+        TextFragment six = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.six);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -58,13 +62,16 @@ public class MainActivity extends AppCompatActivity
                 // Emiits frequently. Drop values if we can't react quickly enough
                 .onBackpressureDrop());
 
-        ReactingObserver.shareObservableAsync(TEST_WEB, TestClient.getTestApi().getUsers(),
-                one.getObserver(), two.getObserver(),
+
+        one.getObserver().subscribeAsync(TEST_INVALID_USER, TestClient.getTestApi().getInvalidUser());
+
+        two.getObserver().subscribeAsync(TEST_404, TestClient.getTestApi().get404());
+
+        ReactingObserver.shareObservableAsync(TEST_USER, TestClient.getTestApi().getUser(),
                 three.getObserver(), four.getObserver());
 
         ReactingObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
-                one.getObserver(), two.getObserver(),
-                three.getObserver(), four.getObserver());
+                five.getObserver(), six.getObserver());
     }
 
     @Override
@@ -81,5 +88,10 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onError(String id, Error errorType) {
         errorType.getThrowable().printStackTrace();
+    }
+
+    @Override
+    public void onCompleted(String id) {
+
     }
 }

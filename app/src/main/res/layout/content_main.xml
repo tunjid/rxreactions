@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:weightSum="2"
+    android:weightSum="3"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.tunjid.rxreactions.sample.activity.MainActivity"
     tools:showIn="@layout/activity_main">
@@ -49,6 +49,28 @@
 
         <fragment
             android:id="@+id/four"
+            android:name="com.tunjid.rxreactions.sample.fragments.TextFragment"
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0px"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <fragment
+            android:id="@+id/five"
+            android:name="com.tunjid.rxreactions.sample.fragments.TextFragment"
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <fragment
+            android:id="@+id/six"
             android:name="com.tunjid.rxreactions.sample.fragments.TextFragment"
             android:layout_width="0px"
             android:layout_height="match_parent"

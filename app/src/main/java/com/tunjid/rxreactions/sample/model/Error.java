@@ -2,6 +2,10 @@ package com.tunjid.rxreactions.sample.model;
 
 import android.util.Log;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.stream.MalformedJsonException;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -25,29 +29,40 @@ public class Error {
 
         if (throwable instanceof IOException) {
 
-            if (throwable instanceof ConnectException)
+            if (throwable instanceof ConnectException) {
                 message = "Could not establish a connection";
-
-            else if (throwable instanceof SocketTimeoutException)
+            }
+            if (throwable instanceof SocketTimeoutException)
                 message = "Request timed out";
 
-            else
+            else if (throwable instanceof MalformedJsonException) {
+                message = "Malformed JSON";
+            }
+            else {
                 message = "No internet connection";
+            }
         }
         else if (throwable instanceof HttpException) {
 
             HttpException httpException = (HttpException) throwable;
 
             try {
-                message = httpException.response().errorBody().string();
+                String json = httpException.response().errorBody().string();
+                Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+                Error error = gson.fromJson(json, Error.class);
+
+                this.message = error.getMessage();
             }
             catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        this.message = throwable.getMessage() != null
-                ? throwable.getMessage()
-                : "Sorry, there was an error";
+
+        if (this.message == null) {
+            this.message = throwable.getMessage() != null
+                    ? throwable.getMessage()
+                    : "Sorry, there was an error";
+        }
     }
 
     public String getMessage() {
