@@ -13,14 +13,12 @@ import rx.schedulers.Schedulers;
 
 /**
  * Created by tj.dahunsi on 8/15/16.
- * An {@link Reaction} that observes events linked to a certain String id
+ * An {@link Reactor} that observes events linked to a certain String id
  */
 
-public class ReactingObserver<T, E>
-        implements
-        Reaction<T, E> {
+public class ReactingObserver<T, E> {
 
-    private static final int TIMEOUT = BuildConfig.DEBUG ? 3 : 12;
+    private static final int TIMEOUT = 25;
 
     /**
      * A Mapping of all the observations this observer is yet to make
@@ -35,44 +33,20 @@ public class ReactingObserver<T, E>
     /**
      * An action to complete post observation.
      */
-    private Reaction<T, E> action;
+    private Reactor<T, E> action;
 
 
     /**
-     * This constructor is used when the {@link ReactingObserver} wants to carry out post
-     * {@link Reaction}s itself.
-     *
-     * @param mapper filters observations to decide whether to {@link Reaction#onNext(String, Object)}
-     * or {@link Reaction#onError(String, Object)}
+     * @param mapper filters {@link T} to decide whether to {@link Reactor#onNext(String, Object)}
+     * or {@link Reactor#onError(String, Object)} should be called
      */
-    public ReactingObserver(ReactionMapper<T, E> mapper) {
-        this.mapper = mapper;
-        this.action = this;
-    }
-
-    /**
-     * This constructor is used when the {@link ReactingObserver} wants to delegate post
-     * {@link Reaction}s another {@link Reaction}.
-     *
-     * @param mapper filters observations to decide whether to {@link Reaction#onNext(String, Object)}
-     * or {@link Reaction#onError(String, Object)}
-     */
-    public ReactingObserver(ReactionMapper<T, E> mapper, Reaction<T, E> action) {
+    public ReactingObserver(ReactionMapper<T, E> mapper, Reactor<T, E> action) {
         this.mapper = mapper;
         this.action = action;
     }
 
-    public void onNext(String id, T observedType) {
-        // Override as necessary
-    }
-
-    @Override
-    public void onError(String id, E errorType) {
-        // Override as necessary
-    }
-
     /**
-     * Unsubscribe from the observation with the specified id
+     * Unsubscribe from the observable with the specified id
      */
     public void unsubscribe(String id) {
         TrackingObserver observer = subscriptionMap.get(id);
@@ -80,7 +54,7 @@ public class ReactingObserver<T, E>
     }
 
     /**
-     * Unsubscribes from all observations
+     * Unsubscribes from all observables
      */
     public void unsubscribeFromAll() {
         for (String id : subscriptionMap.keySet()) unsubscribe(id);
@@ -176,13 +150,15 @@ public class ReactingObserver<T, E>
         @Override
         public void onError(Throwable throwable) {
             subscriptionMap.remove(id);
-            action.onError(id, mapper.getErrorResponse(throwable));
+            action.onError(id, mapper.getErrorObject(throwable));
         }
 
         @Override
         public void onNext(T observedObject) {
-            if (mapper.getErrorResponse(observedObject) == null) action.onNext(id, observedObject);
-            else action.onError(id, mapper.getErrorResponse(observedObject));
+            E errorObject = mapper.checkForError(observedObject);
+
+            if (errorObject == null) action.onNext(id, observedObject);
+            else action.onError(id, errorObject);
         }
     }
 }

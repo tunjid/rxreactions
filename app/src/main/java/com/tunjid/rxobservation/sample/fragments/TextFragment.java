@@ -8,32 +8,30 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.tunjid.rxobservation.ReactingObserver;
+import com.tunjid.rxobservation.Reactor;
 import com.tunjid.rxobservation.sample.R;
-import com.tunjid.rxobservation.sample.baseclasses.BaseFragment;
 import com.tunjid.rxobservation.sample.model.Error;
 import com.tunjid.rxobservation.sample.model.User;
+import com.tunjid.rxobservation.sample.reaction.SampleMapper;
 
 import java.util.ArrayList;
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class TextFragment extends BaseFragment {
+public class TextFragment extends Fragment
+        implements Reactor<Object, Error> {
 
     public static final String TEST_ASYNC = "TEST_ASYNC";
     public static final String TEST_WEB = "TEST_WEB";
     public static final String TEST_404 = "TEST_404";
 
+    ReactingObserver observer = new ReactingObserver<>(new SampleMapper<>(), this);
     TextView textView;
 
     public TextFragment() {
         // Required empty public constructor
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
     }
 
     @Override
@@ -42,6 +40,12 @@ public class TextFragment extends BaseFragment {
         textView = (TextView) rootView.findViewById(R.id.text);
 
         return rootView;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        observer.unsubscribeFromAll();
     }
 
     @Override
@@ -62,12 +66,16 @@ public class TextFragment extends BaseFragment {
 
     @Override
     public void onError(String id, Error error) {
-        super.onError(id, error);
 
         switch (id) {
             case TEST_404:
-                Snackbar.make(getView(), error.getMessage(), Snackbar.LENGTH_SHORT).show();
+                if (getView() != null)
+                    Snackbar.make(getView(), error.getMessage(), Snackbar.LENGTH_SHORT).show();
                 break;
         }
+    }
+
+    public ReactingObserver getObserver() {
+        return observer;
     }
 }
