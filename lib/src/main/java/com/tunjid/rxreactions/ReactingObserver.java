@@ -126,7 +126,7 @@ public class ReactingObserver<T, E> {
         // Subscribe all observers to the same observable.
         for (ReactingObserver<? extends T, E> observer : observers) {
             if (observer != null) {
-                observer.subscribe(id, (Observable)connObs, subscribeOn, observeOn);
+                observer.subscribe(id, (Observable) connObs, subscribeOn, observeOn);
             }
         }
 

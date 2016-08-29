@@ -48,6 +48,8 @@ public class MainActivity extends AppCompatActivity
         TextFragment four = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.four);
         TextFragment five = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.five);
         TextFragment six = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.six);
+        TextFragment seven = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.seven);
+        TextFragment eight = (TextFragment) getSupportFragmentManager().findFragmentById(R.id.eight);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -71,7 +73,8 @@ public class MainActivity extends AppCompatActivity
                 three.getObserver(), four.getObserver());
 
         ReactingObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
-                five.getObserver(), six.getObserver());
+                five.getObserver(), six.getObserver(),
+                seven.getObserver(), eight.getObserver());
     }
 
     @Override
