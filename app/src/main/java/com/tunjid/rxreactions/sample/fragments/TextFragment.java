@@ -58,7 +58,6 @@ public class TextFragment extends Fragment
                 textView.setText(model.toString());
                 break;
         }
-
     }
 
     @Override

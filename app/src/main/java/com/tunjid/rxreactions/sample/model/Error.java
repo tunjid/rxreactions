@@ -33,7 +33,7 @@ public class Error {
      * in memory, and regardless of which observer consumes the error first, the cache ensures
      * they have the same Error object.</p>
      */
-    private static final Map<Request, Error> cachedResponses = createLRUMap(6);
+    private static final Map<Request, Error> cachedResponses = createLRUMap(3);
 
     public Error(Throwable throwable) {
 
