@@ -52,6 +52,11 @@ public class TextFragment extends Fragment
                 User user = (User) model;
                 textView.setText(user.getUsername());
                 break;
+            // Shouldn't happen unless observables and ids are mixed, in which case ¯\_(ツ)_/¯
+            case MainActivity.TEST_INVALID_USER:
+            case MainActivity.TEST_404:
+                textView.setText(model.toString());
+                break;
         }
 
     }
@@ -59,6 +64,7 @@ public class TextFragment extends Fragment
     @Override
     public void onError(String id, Error error) {
         switch (id) {
+            case MainActivity.TEST_USER:
             case MainActivity.TEST_INVALID_USER:
             case MainActivity.TEST_404:
                 textView.setText(error.getMessage());
@@ -68,7 +74,7 @@ public class TextFragment extends Fragment
 
     @Override
     public void onCompleted(String id) {
-
+        // Nothing.
     }
 
     public ReactingObserver<BaseModel, Error> getObserver() {

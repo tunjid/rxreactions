@@ -23,21 +23,21 @@ import retrofit2.adapter.rxjava.HttpException;
 public class Error {
 
     String message;
-    Throwable throwable;
 
     /**
      * <p>The {@link okhttp3.ResponseBody} object in the {@link HttpException} can only be consumed
      * once. For API calls that have more  than one observer this creates a race condition on who
      * can consume the error response body first.</p>
      * <p/>
-     * <p>To avoid this a LRUCache is used. This cache only keeps a fixed amonunt of responses
+     * <p>To avoid this a LRUCache is used. This cache only keeps a fixed amount of responses
      * in memory, and regardless of which observer consumes the error first, the cache ensures
      * they have the same Error object.</p>
      */
     private static final Map<Request, Error> cachedResponses = createLRUMap(6);
 
     public Error(Throwable throwable) {
-        this.throwable = throwable;
+
+        throwable.printStackTrace();
 
         Log.d("ERROR", "Observable error", throwable);
 
@@ -62,18 +62,16 @@ public class Error {
             Request request = httpException.response().raw().request();
 
             if (!cachedResponses.containsKey(request)) {
-
                 try {
                     String json = httpException.response().errorBody().string();
                     Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                    Error error = gson.fromJson(json, Error.class);
+                    Error deserializdError = gson.fromJson(json, Error.class);
 
-                    this.message = error.getMessage();
+                    this.message = deserializdError.getMessage();
 
-                    cachedResponses.put(request, error);
+                    cachedResponses.put(request, deserializdError);
 
                     Log.d("ERROR", "ERROR WAS CREATED FROM HTTPEXCEPTION");
-
                 }
                 catch (Exception e) {
                     e.printStackTrace();
@@ -89,18 +87,12 @@ public class Error {
         }
 
         if (this.message == null) {
-            this.message = throwable.getMessage() != null
-                    ? throwable.getMessage()
-                    : "Sorry, there was an error";
+            this.message = throwable.getMessage() != null ? throwable.getMessage() : "Sorry, there was an error";
         }
     }
 
     public String getMessage() {
         return message;
-    }
-
-    public Throwable getThrowable() {
-        return throwable;
     }
 
     public static <K, V> Map<K, V> createLRUMap(final int maxEntries) {

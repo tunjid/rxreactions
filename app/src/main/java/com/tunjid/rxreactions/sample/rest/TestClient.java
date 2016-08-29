@@ -42,7 +42,7 @@ public class TestClient {
 
     public interface TestApi {
 
-        String ENDPOINT = "https://test.com/";
+        String ENDPOINT = "https://boguswebsitethatshouldnotexist.com/";
 
         @GET("user")
         Observable<User> getUser();
@@ -56,9 +56,21 @@ public class TestClient {
 
     static class MockInterceptor implements Interceptor {
 
-        // FAKE RESPONSES.
+        /**
+         * A simple user JSON responsse
+         */
         private final static String USER = "{\"username\":\"Lad\"}";
-        private final static String INVALID_USER = "{\"error\":{\"message\":\"User does not exist\"}}";
+
+        /**
+         * A JSON response containing an Error JSON response from the server. To be used with a
+         * 200 response to test {@link com.tunjid.rxreactions.sample.reaction.SampleMapper}
+         */
+        private final static String INVALID_USER = "{\"error\":{\"message\":\"User does not exist\"}," +
+                "\"user\":{}}";
+
+        /**
+         * A JSON response used to represent the messagge from the server in the event of a 404
+         */
         private final static String ERROR = "{\"message\":\"Not a valid endpoint\"}";
 
         @Override

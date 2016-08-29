@@ -12,12 +12,14 @@ import com.tunjid.rxreactions.Reactor;
 import com.tunjid.rxreactions.sample.R;
 import com.tunjid.rxreactions.sample.fragments.TextFragment;
 import com.tunjid.rxreactions.sample.model.Error;
+import com.tunjid.rxreactions.sample.model.User;
 import com.tunjid.rxreactions.sample.reaction.SampleMapper;
 import com.tunjid.rxreactions.sample.rest.TestClient;
 
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
+import rx.functions.Func1;
 
 import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_OUT;
 import static com.tunjid.rxreactions.sample.reaction.SampleMapper.DEFAULT_TIME_UNIT;
@@ -60,18 +62,28 @@ public class MainActivity extends AppCompatActivity
         });
 
         fabObserver.setTimeout(DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT);
+
         fabObserver.subscribeAsync("", Observable.interval(25, TimeUnit.MILLISECONDS)
-                // Emiits frequently. Drop values if we can't react quickly enough
+                // Emits frequently; drop values if we can't react quickly enough
                 .onBackpressureDrop());
 
+        Observable<User> numberedUserObservable = Observable.interval(2, TimeUnit.SECONDS)
+                .flatMap(new Func1<Long, Observable<User>>() {
+                    @Override
+                    public Observable<User> call(Long aLong) {
+                        return Observable.just(new User(aLong.toString()));
+                    }
+                });
 
-        one.getObserver().subscribeAsync(TEST_INVALID_USER, TestClient.getTestApi().getInvalidUser());
+        one.getObserver().subscribeAsync(TEST_USER, numberedUserObservable);
 
-        two.getObserver().subscribeAsync(TEST_404, TestClient.getTestApi().get404());
+        two.getObserver().subscribeAsync(TEST_INVALID_USER, TestClient.getTestApi().getInvalidUser());
 
+        // Test a shared observable that call onNext
         ReactingObserver.shareObservableAsync(TEST_USER, TestClient.getTestApi().getUser(),
                 three.getObserver(), four.getObserver());
 
+        // Test a shared observable that calls onError
         ReactingObserver.shareObservableAsync(TEST_404, TestClient.getTestApi().get404(),
                 five.getObserver(), six.getObserver(),
                 seven.getObserver(), eight.getObserver());
@@ -90,11 +102,11 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onError(String id, Error errorType) {
-        errorType.getThrowable().printStackTrace();
+        // Nothing.
     }
 
     @Override
     public void onCompleted(String id) {
-
+        // Nothing.
     }
 }
