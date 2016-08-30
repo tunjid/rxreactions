@@ -32,7 +32,7 @@ public class ReactingObserver<T, E> {
     private ReactionMapper<T, E> mapper;
 
     /**
-     * An reactor to react to the events produced.
+     * A reactor to react to the events produced.
      */
     private Reactor<T, E> reactor;
 
@@ -116,6 +116,7 @@ public class ReactingObserver<T, E> {
      * @param observers All {@link ReactingObserver}s waiting to react
      */
     @SafeVarargs
+    @SuppressWarnings("unchecked") // weird generic comple time error if upper bound is specified in for loop
     public static <T, E> Subscription shareObservable(String id, Observable<? extends T> observable,
                                                       Scheduler subscribeOn, Scheduler observeOn,
                                                       ReactingObserver<? extends T, E>... observers) {
@@ -124,9 +125,10 @@ public class ReactingObserver<T, E> {
         final ConnectableObservable<? extends T> connObs = observable.publish();
 
         // Subscribe all observers to the same observable.
-        for (ReactingObserver<? extends T, E> observer : observers) {
+
+        for (ReactingObserver observer : observers) {
             if (observer != null) {
-                observer.subscribe(id, (Observable) connObs, subscribeOn, observeOn);
+                observer.subscribe(id, connObs, subscribeOn, observeOn);
             }
         }
 
@@ -145,7 +147,8 @@ public class ReactingObserver<T, E> {
             this.id = id;
         }
 
-        private Subscription subscribe(Observable<? extends T> observable, Scheduler subscribeOn, Scheduler observeOn) {
+        private Subscription subscribe(Observable<? extends T> observable,
+                                       Scheduler subscribeOn, Scheduler observeOn) {
 
             if (timeout != 0 && timeUnit != null)
                 observable = observable.timeout(timeout, timeUnit);
