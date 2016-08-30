@@ -73,6 +73,16 @@ public class ReactingObserver<T, E> {
         for (String id : subscriptionMap.keySet()) unsubscribe(id);
     }
 
+    /**
+     * Unsubscribes from all events, nulls the {@link ReactionMapper} and {@link Reactor},
+     * and renders this {@link ReactingObserver} useless.
+     */
+    public void clear() {
+        unsubscribeFromAll();
+        reactor = null;
+        mapper = null;
+    }
+
 
     /**
      * Subcribes to this observable event asynchronously
@@ -90,6 +100,9 @@ public class ReactingObserver<T, E> {
      */
     public final Subscription subscribe(String id, Observable<? extends T> observable,
                                         Scheduler subscribeOn, Scheduler observeOn) {
+
+        if (reactor == null) throw new IllegalArgumentException("Reactor can not be null");
+        if (mapper == null) throw new IllegalArgumentException("Mapper can not be null");
 
         TrackingObserver observer = subscriptionMap.get(id) != null
                 ? subscriptionMap.get(id)
@@ -116,7 +129,8 @@ public class ReactingObserver<T, E> {
      * @param observers All {@link ReactingObserver}s waiting to react
      */
     @SafeVarargs
-    @SuppressWarnings("unchecked") // weird generic comple time error if upper bound is specified in for loop
+    @SuppressWarnings("unchecked")
+    // weird generic comple time error if upper bound is specified in for loop
     public static <T, E> Subscription shareObservable(String id, Observable<? extends T> observable,
                                                       Scheduler subscribeOn, Scheduler observeOn,
                                                       ReactingObserver<? extends T, E>... observers) {
@@ -177,15 +191,18 @@ public class ReactingObserver<T, E> {
             // remove this observer from the map
             subscriptionMap.remove(id);
 
-            reactor.onError(id, mapper.getErrorObject(throwable));
+            if (reactor != null && mapper != null)
+                reactor.onError(id, mapper.getErrorObject(throwable));
         }
 
         @Override
         public void onNext(T observedObject) {
-            E errorObject = mapper.checkForError(observedObject);
+            if (reactor != null && mapper != null) {
+                E errorObject = mapper.checkForError(observedObject);
 
-            if (errorObject == null) reactor.onNext(id, observedObject);
-            else reactor.onError(id, errorObject);
+                if (errorObject == null) reactor.onNext(id, observedObject);
+                else reactor.onError(id, errorObject);
+            }
         }
     }
 }

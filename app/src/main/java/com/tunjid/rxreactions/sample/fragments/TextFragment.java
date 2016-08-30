@@ -46,6 +46,12 @@ public class TextFragment extends Fragment
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+        observer.clear();
+    }
+
+    @Override
     public void onNext(String id, BaseModel model) {
         switch (id) {
             case MainActivity.TEST_USER:

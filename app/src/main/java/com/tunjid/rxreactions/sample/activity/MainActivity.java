@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        fabObserver.unsubscribeFromAll();
+        fabObserver.clear();
     }
 
     @Override
