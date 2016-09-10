@@ -79,6 +79,8 @@ public class ReactingObserver<T, E> {
      */
     public void clear() {
         unsubscribeFromAll();
+        subscriptionMap.clear();
+
         reactor = null;
         mapper = null;
     }
